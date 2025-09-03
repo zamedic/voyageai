@@ -18,6 +18,8 @@ const (
 	ModelVoyage3Large      Model = "voyage-3-large"
 	ModelVoyage3           Model = "voyage-3"
 	ModelVoyage3Lite       Model = "voyage-3-lite"
+	ModelVoyage35          Model = "voyage-3.5"
+	ModelVoyage35Lite      Model = "voyage-3.5-lite"
 	ModelVoyageMultimodal3 Model = "voyage-multimodal-3"
 	ModelVoyageCode3       Model = "voyage-code-3"
 	ModelVoyageFinance2    Model = "voyage-finance-2"
@@ -45,7 +47,7 @@ const (
 type EmbeddingRequest struct {
 	// A list of strings to be embedded.
 	Input []string `json:"input"`
-	// Name of the model. Recommended options: voyage-3-large, voyage-3, voyage-3-lite, voyage-code-3, voyage-finance-2, voyage-law-2.
+	// Name of the model. Recommended options: voyage-3-large, voyage-3.5, voyage-3.5-lite, voyage-code-3, voyage-finance-2, voyage-law-2.
 	Model string `json:"model"`
 	// Type of the input text. Defaults to null. Other options: query, document.
 	InputType *string `json:"input_type,omitempty"`

@@ -146,7 +146,7 @@ func (c *VoyageClient) handleAPIRequest(reqBody any, respBody any, url string) e
 //
 // Parameters:
 //   - texts - A list of texts as a list of strings, such as ["I like cats", "I also like dogs"]
-//   - model - Name of the model. Recommended options: voyage-3-large, voyage-3, voyage-3-lite, voyage-code-3, voyage-finance-2, voyage-law-2.
+//   - model - Name of the model. Recommended options: voyage-3-large, voyage-3.5, voyage-3.5-lite, voyage-code-3, voyage-finance-2, voyage-law-2.
 //   - opts - optional parameters, see [EmbeddingRequestOpts]
 func (c *VoyageClient) Embed(texts []string, model string, opts *EmbeddingRequestOpts) (*EmbeddingResponse, error) {
 	var reqBody EmbeddingRequest
@@ -176,7 +176,7 @@ func (c *VoyageClient) Embed(texts []string, model string, opts *EmbeddingReques
 //
 // Parameters:
 //   - inputs - A list of multimodal inputs to be vectorized. See the "[Voyage AI docs]" for info on constraints.
-//   - model - Name of the model. Recommended options: voyage-3-large, voyage-3, voyage-3-lite, voyage-code-3, voyage-finance-2, voyage-law-2.
+//   - model - Name of the model. Recommended options: voyage-3-large, voyage-3.5, voyage-3.5-lite, voyage-code-3, voyage-finance-2, voyage-law-2.
 //   - opts - Optional parameters, see [MultimodalRequestOpts]
 //
 // [Voyage AI docs]: https://docs.voyageai.com/docs/multimodal-embeddings
