@@ -104,6 +104,9 @@ func (c *VoyageClient) handleAPIRequest(reqBody any, respBody any, url string) e
 		c.opts.MaxRetries = 1
 	}
 
+	var err error
+	var cont bool
+
 	for range c.opts.MaxRetries {
 		bb, err := json.Marshal(reqBody)
 		if err != nil {
@@ -121,7 +124,7 @@ func (c *VoyageClient) handleAPIRequest(reqBody any, respBody any, url string) e
 		}
 
 		if resp.StatusCode >= 400 {
-			cont, err := c.handleAPIError(resp)
+			cont, err = c.handleAPIError(resp)
 			if !cont {
 				return err
 			}
@@ -139,7 +142,7 @@ func (c *VoyageClient) handleAPIRequest(reqBody any, respBody any, url string) e
 		}
 	}
 
-	return nil
+	return err
 }
 
 // Returns a pointer to an [EmbeddingResponse] or an error if the request failed.
