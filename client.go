@@ -3,6 +3,7 @@ package voyageai
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -73,13 +74,13 @@ func (c *VoyageClient) do(req *http.Request) (*http.Response, error) {
 // The request retry loop will continue if the error is recoverable and it will abort otherwise.
 func (c *VoyageClient) handleAPIError(resp *http.Response) (bool, error) {
 	code := resp.StatusCode
-	var apiError APIError
+	var voyageError VoyageError
 	if code >= 400 && code < 500 {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return false, err
 		}
-		err = json.Unmarshal(body, &apiError)
+		err = json.Unmarshal(body, &voyageError)
 		if err != nil {
 			return false, err
 		}
@@ -87,63 +88,79 @@ func (c *VoyageClient) handleAPIError(resp *http.Response) (bool, error) {
 
 	switch code {
 	case 400:
-		return false, fmt.Errorf("voyage: bad request, detail: %s", apiError.Detail)
+		return false, fmt.Errorf("voyage: bad request, detail: %s", voyageError.Detail)
 	case 401:
-		return false, fmt.Errorf("voyage: unauthorized, detail: %s", apiError.Detail)
+		return false, fmt.Errorf("voyage: unauthorized, detail: %s", voyageError.Detail)
 	case 422:
-		return false, fmt.Errorf("voyage: Malformed Request, detail: %s", apiError.Detail)
+		return false, fmt.Errorf("voyage: Malformed Request, detail: %s", voyageError.Detail)
 	case 429:
-		return true, fmt.Errorf("voyage: Rate Limit Reached, detail: %s", apiError.Detail)
+		return true, fmt.Errorf("voyage: Rate Limit Reached, detail: %s", voyageError.Detail)
 	default:
 		return true, fmt.Errorf("voyage: Server Error")
 	}
 }
 
 func (c *VoyageClient) handleAPIRequest(reqBody any, respBody any, url string) error {
-	if c.opts.MaxRetries == 0 {
-		c.opts.MaxRetries = 1
+	maxRetries := c.opts.MaxRetries
+	if maxRetries == 0 {
+		maxRetries = 1
 	}
 
-	var err400 error
-	var cont bool
+	var lastErr error
 
-	for range c.opts.MaxRetries {
-		err400 = nil
-		bb, err := json.Marshal(reqBody)
-		if err != nil {
-			return err
-		}
-
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(bb))
-		if err != nil {
-			return err
-		}
-
-		resp, err := c.do(req)
-		if err != nil {
-			return err
-		}
-
-		if resp.StatusCode >= 400 {
-			cont, err400 = c.handleAPIError(resp)
-			if !cont {
-				return err
+	for i := 0; i < maxRetries; i++ {
+		if err := c.executeRequest(reqBody, respBody, url); err != nil {
+			if shouldRetry, apiErr := c.classifyError(err); shouldRetry {
+				lastErr = apiErr
+				continue
 			}
-			continue
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
 			return err
 		}
-
-		err = json.Unmarshal(body, respBody)
-		if err != nil {
-			return err
-		}
+		return nil
 	}
 
-	return err400
+	return lastErr
+}
+
+func (c *VoyageClient) classifyError(err error) (shouldRetry bool, apiErr error) {
+	var apiError *APIError
+	if errors.As(err, &apiError) {
+		return c.handleAPIError(apiError.Response)
+	}
+	return false, err
+}
+
+func (c *VoyageClient) executeRequest(reqBody any, respBody any, url string) error {
+	reqBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBytes))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	resp, err := c.do(req)
+	if err != nil {
+		return fmt.Errorf("execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return &APIError{StatusCode: resp.StatusCode, Response: resp}
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read response: %w", err)
+	}
+
+	if err := json.Unmarshal(body, respBody); err != nil {
+		return fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	return nil
 }
 
 // Returns a pointer to an [EmbeddingResponse] or an error if the request failed.

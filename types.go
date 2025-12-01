@@ -9,6 +9,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"net/http"
 )
 
 // A list of models supported by the Voyage AI API.
@@ -221,8 +222,17 @@ type MultimodalRequestOpts struct {
 	OuputEncoding *string `json:"output_encoding,omitempty"`
 }
 
-type APIError struct {
+type VoyageError struct {
 	Detail string `json:"detail"`
+}
+
+type APIError struct {
+	StatusCode int
+	Response   *http.Response
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("voyageai: API error %d: %s", e.StatusCode, e.Response.Status)
 }
 
 // A data structure that matches the expected fields of the /rerank endpoint.
