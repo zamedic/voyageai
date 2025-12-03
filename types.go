@@ -9,7 +9,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"net/http"
 )
 
 // A list of models supported by the Voyage AI API.
@@ -228,11 +227,11 @@ type VoyageError struct {
 
 type APIError struct {
 	StatusCode int
-	Response   *http.Response
+	Response   []byte
 }
 
 func (e *APIError) Error() string {
-	return fmt.Sprintf("voyageai: API error %d: %s", e.StatusCode, e.Response.Status)
+	return fmt.Sprintf("voyageai: API error %d: %s", e.StatusCode, e.Response)
 }
 
 // A data structure that matches the expected fields of the /rerank endpoint.

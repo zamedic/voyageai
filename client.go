@@ -72,29 +72,17 @@ func (c *VoyageClient) do(req *http.Request) (*http.Response, error) {
 
 // handleAPIError returns true if the given error is recoverable and false otherwise.
 // The request retry loop will continue if the error is recoverable and it will abort otherwise.
-func (c *VoyageClient) handleAPIError(resp *http.Response) (bool, error) {
-	code := resp.StatusCode
-	var voyageError VoyageError
-	if code >= 400 && code < 500 {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return false, err
-		}
-		err = json.Unmarshal(body, &voyageError)
-		if err != nil {
-			return false, err
-		}
-	}
+func (c *VoyageClient) handleAPIError(resp *APIError) (bool, error) {
 
-	switch code {
+	switch resp.StatusCode {
 	case 400:
-		return false, fmt.Errorf("voyage: bad request, detail: %s", voyageError.Detail)
+		return false, fmt.Errorf("voyage: bad request, detail: %s", resp.Response)
 	case 401:
-		return false, fmt.Errorf("voyage: unauthorized, detail: %s", voyageError.Detail)
+		return false, fmt.Errorf("voyage: unauthorized, detail: %s", resp.Response)
 	case 422:
-		return false, fmt.Errorf("voyage: Malformed Request, detail: %s", voyageError.Detail)
+		return false, fmt.Errorf("voyage: Malformed Request, detail: %s", resp.Response)
 	case 429:
-		return true, fmt.Errorf("voyage: Rate Limit Reached, detail: %s", voyageError.Detail)
+		return true, fmt.Errorf("voyage: Rate Limit Reached, detail: %s", resp.Response)
 	default:
 		return true, fmt.Errorf("voyage: Server Error")
 	}
@@ -125,7 +113,7 @@ func (c *VoyageClient) handleAPIRequest(reqBody any, respBody any, url string) e
 func (c *VoyageClient) classifyError(err error) (shouldRetry bool, apiErr error) {
 	var apiError *APIError
 	if errors.As(err, &apiError) {
-		return c.handleAPIError(apiError.Response)
+		return c.handleAPIError(apiError)
 	}
 	return false, err
 }
@@ -147,13 +135,13 @@ func (c *VoyageClient) executeRequest(reqBody any, respBody any, url string) err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 400 {
-		return &APIError{StatusCode: resp.StatusCode, Response: resp}
-	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("read response: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		return &APIError{StatusCode: resp.StatusCode, Response: body}
 	}
 
 	if err := json.Unmarshal(body, respBody); err != nil {
