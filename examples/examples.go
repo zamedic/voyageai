@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/austinfhunter/voyageai"
+	"github.com/zamedic/voyageai"
 )
 
 func main() {

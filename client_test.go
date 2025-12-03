@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/austinfhunter/voyageai"
+	"github.com/zamedic/voyageai"
 )
 
 func TestNewClientNilOpts(t *testing.T) {
